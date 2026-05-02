@@ -1,0 +1,14 @@
+raw_bucket: bkt-prod-raw-user-usc1
+output_bucket: bkt-prod-user-usc1
+pipeline_timezone: Europe/Madrid
+
+face_detector_enabled: true
+
+license_plate:
+  detection_model: morsetechlab/yolov11-license-plate-detection
+  model_file: license-plate-finetune-v1n.pt
+  min_score: 0.25
+
+blur:
+  kernel_ratio: 0.18
+  min_kernel: 31
