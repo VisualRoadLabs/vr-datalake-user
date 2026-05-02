@@ -12,3 +12,10 @@ license_plate:
 blur:
   kernel_ratio: 0.18
   min_kernel: 31
+
+bigquery:
+  project: vr-prj-prod-data-v1
+  image_metadata_table: ds_raw_metadata.tbl_images
+  privacy_metadata_table: ds_raw_metadata.tbl_user_images_privacy
+  label_review_status_table: ds_label_review.tbl_label_review_status
+  label_review_confidence_threshold: 0.8
