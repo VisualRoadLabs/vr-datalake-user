@@ -1,0 +1,73 @@
+substitutions:
+  _REGION: us-central1
+  _AR_PROJECT: vr-prj-dev-cicd-v1
+  _AR_REPO: vr-datalake-user
+  _IMAGE_NAME: vr-datalake-user
+  _PROJECT_PROD: vr-prj-prod-data-v1
+  _JOB_NAME: vr-datalake-user
+  _PROCESS_DATE: ""
+
+steps:
+  - name: python:3.11-slim-bookworm
+    id: install-and-test
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install --no-cache-dir poetry==2.3.2
+        poetry lock
+        poetry install --extras dev --no-interaction --no-root
+        poetry run pytest -v tests
+
+  - name: gcr.io/cloud-builders/docker
+    id: build-image
+    args:
+      - build
+      - -f
+      - Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/${_AR_PROJECT}/${_AR_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${_AR_PROJECT}/${_AR_REPO}/${_IMAGE_NAME}:latest
+      - .
+    waitFor:
+      - install-and-test
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-tag
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${_AR_PROJECT}/${_AR_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
+    waitFor:
+      - build-image
+
+  - name: gcr.io/cloud-builders/docker
+    id: push-latest
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${_AR_PROJECT}/${_AR_REPO}/${_IMAGE_NAME}:latest
+    waitFor:
+      - build-image
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - update
+      - ${_JOB_NAME}
+      - --image=${_REGION}-docker.pkg.dev/${_AR_PROJECT}/${_AR_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
+      - --project=${_PROJECT_PROD}
+      - --region=${_REGION}
+      - --set-env-vars=PROCESS_DATE=${_PROCESS_DATE}
+    waitFor:
+      - push-tag
+      - push-latest
+
+images:
+  - ${_REGION}-docker.pkg.dev/${_AR_PROJECT}/${_AR_REPO}/${_IMAGE_NAME}:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${_AR_PROJECT}/${_AR_REPO}/${_IMAGE_NAME}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
