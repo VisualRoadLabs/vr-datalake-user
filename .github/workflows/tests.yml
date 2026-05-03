@@ -1,0 +1,34 @@
+name: Run Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: pip install poetry==2.3.2
+
+      - name: Install dependencies
+        run: poetry install --extras dev --no-interaction --no-root
+
+      - name: Run tests
+        env:
+          PYTHONPATH: .
+        run: poetry run pytest tests -v
