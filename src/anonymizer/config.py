@@ -10,6 +10,9 @@ from zoneinfo import ZoneInfo
 import yaml
 
 
+PROD_CONFIG_PATH = Path("configs/prod.yaml")
+
+
 @dataclass(frozen=True)
 class Settings:
     raw_bucket: str
@@ -30,7 +33,11 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        config = _load_config(os.getenv("CONFIG_PATH", "configs/prod.yaml"))
+        return cls.from_yaml(PROD_CONFIG_PATH)
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> "Settings":
+        config = _load_config(path)
         timezone = _required_config(config, "pipeline_timezone")
         return cls(
             raw_bucket=_required_config(config, "raw_bucket"),
@@ -90,7 +97,7 @@ def _process_date_from_env(timezone: str) -> date:
     return (now - timedelta(days=1)).date()
 
 
-def _load_config(path: str) -> dict[str, Any]:
+def _load_config(path: str | Path) -> dict[str, Any]:
     config_path = Path(path)
     if not config_path.exists():
         return {}

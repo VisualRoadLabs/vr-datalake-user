@@ -29,10 +29,9 @@ bigquery:
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("CONFIG_PATH", str(config_path))
     monkeypatch.setenv("PROCESS_DATE", "2026-05-01")
 
-    settings = Settings.from_env()
+    settings = Settings.from_yaml(config_path)
 
     assert settings.raw_bucket == "raw-bucket"
     assert settings.output_bucket == "output-bucket"
@@ -74,11 +73,10 @@ bigquery:
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("CONFIG_PATH", str(config_path))
     monkeypatch.setenv("RAW_BUCKET", "override-raw")
     monkeypatch.setenv("PROCESS_DATE", "2026-05-01")
 
-    settings = Settings.from_env()
+    settings = Settings.from_yaml(config_path)
 
     assert settings.raw_bucket == "raw-bucket"
     assert settings.process_date == date(2026, 5, 1)
@@ -87,7 +85,5 @@ bigquery:
 def test_missing_required_yaml_key_fails(monkeypatch, tmp_path):
     config_path = tmp_path / "config.yaml"
     config_path.write_text("raw_bucket: raw-bucket\n", encoding="utf-8")
-    monkeypatch.setenv("CONFIG_PATH", str(config_path))
-
     with pytest.raises(ValueError, match="Missing required config key: pipeline_timezone"):
-        Settings.from_env()
+        Settings.from_yaml(config_path)
