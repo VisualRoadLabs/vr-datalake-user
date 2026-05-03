@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -10,6 +11,7 @@ from anonymizer.paths import RawObjectPath
 
 
 REVIEW_PENDING = "review_pending"
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -40,14 +42,41 @@ class GoogleBigQueryMetadataWriter:
     def __init__(self, settings: Settings) -> None:
         from google.cloud import bigquery
 
+        self.bigquery = bigquery
         self.client = bigquery.Client(project=settings.bigquery_project)
         self.settings = settings
 
     def write(self, rows: BigQueryRows) -> None:
+        image_id = rows.image["image_id"]
+        if self.image_exists(image_id):
+            LOGGER.warning(
+                "BigQuery metadata already exists for image_id=%s, skipping inserts",
+                image_id,
+            )
+            return
+
         self._insert(self.settings.image_metadata_table, rows.image)
         self._insert(self.settings.privacy_metadata_table, rows.privacy)
         if rows.review_status is not None:
             self._insert(self.settings.label_review_status_table, rows.review_status)
+
+    def image_exists(self, image_id: str) -> bool:
+        table_id = _table_id(
+            self.settings.bigquery_project,
+            self.settings.image_metadata_table,
+        )
+        query = f"""
+            SELECT 1
+            FROM `{table_id}`
+            WHERE image_id = @image_id
+            LIMIT 1
+        """
+        job_config = self.bigquery.QueryJobConfig(
+            query_parameters=[
+                self.bigquery.ScalarQueryParameter("image_id", "STRING", image_id)
+            ]
+        )
+        return any(self.client.query(query, job_config=job_config).result())
 
     def _insert(self, table: str, row: dict[str, Any]) -> None:
         table_id = _table_id(self.settings.bigquery_project, table)
