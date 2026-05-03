@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,6 +13,10 @@ from anonymizer.metadata import (
     label_metadata_from_json,
 )
 from anonymizer.paths import RawObjectPath, parse_raw_image_name
+from gcs.storage import ObjectAlreadyExists
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -59,12 +64,7 @@ class AnonymizationService:
             min_blur_kernel=self.settings.min_blur_kernel,
         )
 
-        self.storage.upload_bytes(
-            self.settings.output_bucket,
-            raw_path.output_image_name,
-            anonymized,
-            content_type="image/jpeg",
-        )
+        self._upload_image(raw_path, anonymized)
 
         output_label, label_metadata = self._copy_label_if_present(raw_path)
         self._write_metadata(
@@ -81,6 +81,21 @@ class AnonymizationService:
             output_label=output_label,
         )
 
+    def _upload_image(self, raw_path: RawObjectPath, anonymized: bytes) -> None:
+        try:
+            self.storage.upload_bytes(
+                self.settings.output_bucket,
+                raw_path.output_image_name,
+                anonymized,
+                content_type="image/jpeg",
+            )
+        except ObjectAlreadyExists:
+            LOGGER.warning(
+                "Output image already exists, keeping existing object: gs://%s/%s",
+                self.settings.output_bucket,
+                raw_path.output_image_name,
+            )
+
     def _copy_label_if_present(self, raw_path: RawObjectPath) -> tuple[str | None, Any | None]:
         if not self.storage.exists(self.settings.raw_bucket, raw_path.sibling_json_name):
             return None, None
@@ -91,13 +106,20 @@ class AnonymizationService:
         )
         label_metadata = label_metadata_from_json(json.loads(label_bytes.decode("utf-8")))
 
-        self.storage.copy_blob(
-            self.settings.raw_bucket,
-            raw_path.sibling_json_name,
-            self.settings.output_bucket,
-            raw_path.output_label_name,
-            content_type="application/json",
-        )
+        try:
+            self.storage.copy_blob(
+                self.settings.raw_bucket,
+                raw_path.sibling_json_name,
+                self.settings.output_bucket,
+                raw_path.output_label_name,
+                content_type="application/json",
+            )
+        except ObjectAlreadyExists:
+            LOGGER.warning(
+                "Output label already exists, keeping existing object: gs://%s/%s",
+                self.settings.output_bucket,
+                raw_path.output_label_name,
+            )
         return raw_path.output_label_name, label_metadata
 
     def _write_metadata(
