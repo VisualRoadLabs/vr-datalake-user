@@ -73,6 +73,7 @@ def test_high_confidence_json_writes_image_and_privacy_metadata_without_review()
         "gs://bkt-prod-user-usc1/labels/vehiclehash/session-1/image-1.json"
     )
     assert rows.privacy["vehicle_id_hash"] == "vehiclehash"
+    assert rows.privacy["session_id"] == "session-1"
     assert rows.privacy["confidence_score"] == 0.91
     assert rows.privacy["dlp_status"] == "processed"
     assert rows.review_status is None
