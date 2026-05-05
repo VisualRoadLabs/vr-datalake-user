@@ -16,10 +16,10 @@ OUTPUT_BUCKET = "bkt-prod-user-usc1"
 def test_batch_processes_only_images_from_process_date_prefix():
     storage = FakeStorage(
         {
-            (RAW_BUCKET, "incoming/2026/05/01/veh/image-1.jpg"): _jpg_bytes(),
-            (RAW_BUCKET, "incoming/2026/05/01/veh/image-1.json"): b'{"Lines":[]}',
-            (RAW_BUCKET, "incoming/2026/05/01/veh/image-2.json"): b'{"Lines":[]}',
-            (RAW_BUCKET, "incoming/2026/05/02/veh/image-3.jpg"): _jpg_bytes(),
+            (RAW_BUCKET, "incoming/2026/05/01/veh/session-1/image-1.jpg"): _jpg_bytes(),
+            (RAW_BUCKET, "incoming/2026/05/01/veh/session-1/image-1.json"): b'{"Lines":[]}',
+            (RAW_BUCKET, "incoming/2026/05/01/veh/session-1/image-2.json"): b'{"Lines":[]}',
+            (RAW_BUCKET, "incoming/2026/05/02/veh/session-1/image-3.jpg"): _jpg_bytes(),
         }
     )
     settings = make_settings(
@@ -38,9 +38,9 @@ def test_batch_processes_only_images_from_process_date_prefix():
     assert result.succeeded
     assert result.discovered_images == 1
     assert result.processed == 1
-    assert (OUTPUT_BUCKET, "images/2026/05/image-1.jpg") in storage.objects
-    assert (OUTPUT_BUCKET, "labels/2026/05/image-1.json") in storage.objects
-    assert (OUTPUT_BUCKET, "images/2026/05/image-3.jpg") not in storage.objects
+    assert (OUTPUT_BUCKET, "images/veh/session-1/image-1.jpg") in storage.objects
+    assert (OUTPUT_BUCKET, "labels/veh/session-1/image-1.json") in storage.objects
+    assert (OUTPUT_BUCKET, "images/veh/session-1/image-3.jpg") not in storage.objects
 
 
 def _jpg_bytes() -> bytes:
