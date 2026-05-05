@@ -131,6 +131,7 @@ def build_bigquery_rows(
     privacy_row = {
         "image_id": raw_path.image_id,
         "vehicle_id_hash": raw_path.vehicle_id_hash,
+        "session_id": raw_path.session_id,
         "model_version_at_capture": model_version,
         "confidence_score": confidence_score,
         "received_at": _received_at(label_metadata, timestamp),

@@ -17,11 +17,11 @@ def test_image_object_uploads_anonymized_image_and_copies_json():
         {
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehicle/image-1.jpg",
+                "incoming/2026/05/02/vehicle/session-1/image-1.jpg",
             ): _jpg_bytes(),
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehicle/image-1.json",
+                "incoming/2026/05/02/vehicle/session-1/image-1.json",
             ): b'{"confidence_score":0.91,"Lines":[]}',
         }
     )
@@ -29,13 +29,13 @@ def test_image_object_uploads_anonymized_image_and_copies_json():
 
     result = service.process_raw_image(
         RAW_BUCKET,
-        "incoming/2026/05/02/vehicle/image-1.jpg",
+        "incoming/2026/05/02/vehicle/session-1/image-1.jpg",
     )
 
     assert result.status == "processed"
-    assert (OUTPUT_BUCKET, "images/2026/05/image-1.jpg") in storage.objects
-    assert (OUTPUT_BUCKET, "labels/2026/05/image-1.json") in storage.objects
-    assert storage.copies[0][3] == "labels/2026/05/image-1.json"
+    assert (OUTPUT_BUCKET, "images/vehicle/session-1/image-1.jpg") in storage.objects
+    assert (OUTPUT_BUCKET, "labels/vehicle/session-1/image-1.json") in storage.objects
+    assert storage.copies[0][3] == "labels/vehicle/session-1/image-1.json"
 
 
 def test_high_confidence_json_writes_image_and_privacy_metadata_without_review():
@@ -44,11 +44,11 @@ def test_high_confidence_json_writes_image_and_privacy_metadata_without_review()
         {
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehiclehash/image-1.jpg",
+                "incoming/2026/05/02/vehiclehash/session-1/image-1.jpg",
             ): _jpg_bytes(),
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehiclehash/image-1.json",
+                "incoming/2026/05/02/vehiclehash/session-1/image-1.json",
             ): (
                 b'{"confidence_score":0.91,'
                 b'"model_version_at_capture":"lane-v1","Lines":[]}'
@@ -59,16 +59,21 @@ def test_high_confidence_json_writes_image_and_privacy_metadata_without_review()
 
     result = service.process_raw_image(
         RAW_BUCKET,
-        "incoming/2026/05/02/vehiclehash/image-1.jpg",
+        "incoming/2026/05/02/vehiclehash/session-1/image-1.jpg",
     )
 
     assert result.status == "processed"
     rows = metadata_writer.rows[0]
     assert rows.image["image_id"] == "image-1"
     assert rows.image["source_type"] == "user"
-    assert rows.image["gcs_uri"] == "gs://bkt-prod-user-usc1/images/2026/05/image-1.jpg"
-    assert rows.image["label_gcs_uri"] == "gs://bkt-prod-user-usc1/labels/2026/05/image-1.json"
+    assert rows.image["gcs_uri"] == (
+        "gs://bkt-prod-user-usc1/images/vehiclehash/session-1/image-1.jpg"
+    )
+    assert rows.image["label_gcs_uri"] == (
+        "gs://bkt-prod-user-usc1/labels/vehiclehash/session-1/image-1.json"
+    )
     assert rows.privacy["vehicle_id_hash"] == "vehiclehash"
+    assert rows.privacy["session_id"] == "session-1"
     assert rows.privacy["confidence_score"] == 0.91
     assert rows.privacy["dlp_status"] == "processed"
     assert rows.review_status is None
@@ -80,11 +85,11 @@ def test_low_confidence_json_writes_review_pending_metadata():
         {
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehiclehash/image-2.jpg",
+                "incoming/2026/05/02/vehiclehash/session-1/image-2.jpg",
             ): _jpg_bytes(),
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehiclehash/image-2.json",
+                "incoming/2026/05/02/vehiclehash/session-1/image-2.json",
             ): (
                 b'{"confidence_score":0.41,'
                 b'"model_version_at_capture":"lane-v2","Lines":[]}'
@@ -95,7 +100,7 @@ def test_low_confidence_json_writes_review_pending_metadata():
 
     result = service.process_raw_image(
         RAW_BUCKET,
-        "incoming/2026/05/02/vehiclehash/image-2.jpg",
+        "incoming/2026/05/02/vehiclehash/session-1/image-2.jpg",
     )
 
     assert result.status == "processed"
@@ -119,7 +124,7 @@ def test_missing_json_writes_null_label_metadata_without_review():
         {
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehiclehash/image-3.jpg",
+                "incoming/2026/05/02/vehiclehash/session-1/image-3.jpg",
             ): _jpg_bytes(),
         }
     )
@@ -127,7 +132,7 @@ def test_missing_json_writes_null_label_metadata_without_review():
 
     result = service.process_raw_image(
         RAW_BUCKET,
-        "incoming/2026/05/02/vehiclehash/image-3.jpg",
+        "incoming/2026/05/02/vehiclehash/session-1/image-3.jpg",
     )
 
     assert result.status == "processed"
@@ -143,7 +148,7 @@ def test_image_object_without_json_uploads_only_image():
         {
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehicle/image-2.jpg",
+                "incoming/2026/05/02/vehicle/session-1/image-2.jpg",
             ): _jpg_bytes(),
         }
     )
@@ -151,12 +156,12 @@ def test_image_object_without_json_uploads_only_image():
 
     result = service.process_raw_image(
         RAW_BUCKET,
-        "incoming/2026/05/02/vehicle/image-2.jpg",
+        "incoming/2026/05/02/vehicle/session-1/image-2.jpg",
     )
 
     assert result.status == "processed"
-    assert (OUTPUT_BUCKET, "images/2026/05/image-2.jpg") in storage.objects
-    assert (OUTPUT_BUCKET, "labels/2026/05/image-2.json") not in storage.objects
+    assert (OUTPUT_BUCKET, "images/vehicle/session-1/image-2.jpg") in storage.objects
+    assert (OUTPUT_BUCKET, "labels/vehicle/session-1/image-2.json") not in storage.objects
 
 
 def test_existing_output_image_logs_warning_and_does_not_fail(caplog):
@@ -164,7 +169,7 @@ def test_existing_output_image_logs_warning_and_does_not_fail(caplog):
         {
             (
                 RAW_BUCKET,
-                "incoming/2026/05/02/vehicle/image-4.jpg",
+                "incoming/2026/05/02/vehicle/session-1/image-4.jpg",
             ): _jpg_bytes(),
         }
     )
@@ -172,7 +177,7 @@ def test_existing_output_image_logs_warning_and_does_not_fail(caplog):
 
     result = service.process_raw_image(
         RAW_BUCKET,
-        "incoming/2026/05/02/vehicle/image-4.jpg",
+        "incoming/2026/05/02/vehicle/session-1/image-4.jpg",
     )
 
     assert result.status == "processed"
